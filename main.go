@@ -4,20 +4,38 @@ import (
 	"expvar"
 	"fmt"
 	"net/http"
+
+	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/middleware"
 )
 
 func main() {
-	// Define some variables to export
+	// Create a new Chi router
+	r := chi.NewRouter()
+
 	counter := expvar.NewInt("counter")
 	counter.Add(1)
+	sample := expvar.NewString("name")
+	sample.Set("value")
 
-	// Start an HTTP server
-	http.HandleFunc("/hello", helloHandler)
-	//http.Handle("/debug/vars", expvar.Handler())
-	fmt.Println("server is running on 8080")
-	http.ListenAndServe(":8080", nil)
+	// Register middleware
+	r.Use(middleware.Logger)
+
+	// Register expvar handler
+	r.Get("/debug/vars", expvarHandler)
+
+	// Add your other routes and handlers
+	r.Get("/", helloHandler)
+
+	// Start the server
+	fmt.Println("Server listening on :8080")
+	http.ListenAndServe(":8080", r)
 }
 
 func helloHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Hello, world!")
+}
+
+func expvarHandler(w http.ResponseWriter, r *http.Request) {
+	expvar.Handler().ServeHTTP(w, r)
 }
